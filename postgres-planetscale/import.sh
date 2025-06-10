@@ -18,40 +18,39 @@ usage() {
 }
 
 IDENTIFIER="" INIT_ONLY="" DEBUG="" SOURCE="" SSL_MODE="none" TABLE_MAPPINGS="" TARGET=""
-while [ "$#" -gt 0 ]
-do
+while [ "$#" -gt 0 ]; do
     case "$1" in
 
-        "-i"|"--identifier") IDENTIFIER="$2" shift 2;;
-        "-i"*) IDENTIFIER="$(echo "$1" | cut -c"3-")" shift;;
-        "--identifier="*) IDENTIFIER="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+    "-i" | "--identifier") IDENTIFIER="$2" shift 2 ;;
+    "-i"*) IDENTIFIER="$(echo "$1" | cut -c"3-")" shift ;;
+    "--identifier="*) IDENTIFIER="$(echo "$1" | cut -d"=" -f"2-")" shift ;;
 
-        "--init-only") INIT_ONLY="$1" shift;;
+    "--init-only") INIT_ONLY="$1" shift ;;
 
-        "--debug") DEBUG="$1" shift;;
+    "--debug") DEBUG="$1" shift ;;
 
-        "-s"|"--source") SOURCE="$2" shift 2;;
-        "-s"*) SOURCE="$(echo "$1" | cut -c"3-")" shift;;
-        "--source="*) SOURCE="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+    "-s" | "--source") SOURCE="$2" shift 2 ;;
+    "-s"*) SOURCE="$(echo "$1" | cut -c"3-")" shift ;;
+    "--source="*) SOURCE="$(echo "$1" | cut -d"=" -f"2-")" shift ;;
 
-        "--table-mappings") TABLE_MAPPINGS="$2" shift 2;;
-        "--table-mappings="*) TABLE_MAPPINGS="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+    "--table-mappings") TABLE_MAPPINGS="$2" shift 2 ;;
+    "--table-mappings="*) TABLE_MAPPINGS="$(echo "$1" | cut -d"=" -f"2-")" shift ;;
 
-        "-t"|"--target") TARGET="$2" shift 2;;
-        "-t"*) TARGET="$(echo "$1" | cut -c"3-")" shift;;
-        "--target="*) TARGET="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+    "-t" | "--target") TARGET="$2" shift 2 ;;
+    "-t"*) TARGET="$(echo "$1" | cut -c"3-")" shift ;;
+    "--target="*) TARGET="$(echo "$1" | cut -d"=" -f"2-")" shift ;;
 
-        "--tls") SSL_MODE="require" shift;;
+    "--tls") SSL_MODE="require" shift ;;
 
-        "-h"|"--help") usage 0;;
-        *) usage 1;;
+    "-h" | "--help") usage 0 ;;
+    *) usage 1 ;;
     esac
 done
-if [ -z "$IDENTIFIER" -o -z "$SOURCE" -o -z "$TARGET" ]
-then usage 1
+if [ -z "$IDENTIFIER" -o -z "$SOURCE" -o -z "$TARGET" ]; then
+    usage 1
 fi
-if ! echo "$SOURCE" | grep -E -q '^[^:@/]+:[^:@]+@[^:@/]+/[^:@/]+/[^:@/]+$'
-then usage 1
+if ! echo "$SOURCE" | grep -E -q '^[^:@/]+:[^:@]+@[^:@/]+/[^:@/]+/[^:@/]+$'; then
+    usage 1
 fi
 SOURCE_USERNAME="$(echo "$SOURCE" | cut -d":" -f"1")"
 SOURCE_PASSWORD="$(echo "$SOURCE" | cut -d":" -f"2" | cut -d"@" -f"1")"
@@ -59,15 +58,14 @@ SOURCE_HOSTNAME="$(echo "$SOURCE" | cut -d"@" -f"2" | cut -d"/" -f"1")"
 SOURCE_DATABASE="$(echo "$SOURCE" | cut -d"/" -f"2")"
 SOURCE_SCHEMA="$(echo "$SOURCE" | cut -d"/" -f"3")"
 grep -q "$SOURCE_HOSTNAME:5432:$SOURCE_DATABASE:$SOURCE_USERNAME:$SOURCE_PASSWORD" "$HOME/.pgpass" ||
-echo "$SOURCE_HOSTNAME:5432:$SOURCE_DATABASE:$SOURCE_USERNAME:$SOURCE_PASSWORD" >>"$HOME/.pgpass"
+    echo "$SOURCE_HOSTNAME:5432:$SOURCE_DATABASE:$SOURCE_USERNAME:$SOURCE_PASSWORD" >>"$HOME/.pgpass"
 chmod 600 "$HOME/.pgpass"
-if [ "$TABLE_MAPPINGS" -a ! -f "$TABLE_MAPPINGS" ]
-then
+if [ "$TABLE_MAPPINGS" -a ! -f "$TABLE_MAPPINGS" ]; then
     echo "$TABLE_MAPPINGS: file not found" >&2
     exit 1
 fi
-if ! echo "$TARGET" | grep -E -q '^[^:@/]+:[^:@]+@[^:@/]+/[^:@/]+$'
-then usage 1
+if ! echo "$TARGET" | grep -E -q '^[^:@/]+:[^:@]+@[^:@/]+/[^:@/]+$'; then
+    usage 1
 fi
 TARGET_USERNAME="$(echo "$TARGET" | cut -d":" -f"1")"
 TARGET_PASSWORD="$(echo "$TARGET" | cut -d":" -f"2" | cut -d"@" -f"1")"
@@ -99,8 +97,8 @@ SOURCE_ENDPOINT_ARN="$(
         --engine-name "postgres" \
         --output "text" \
         --password "$(
-            if echo "$SOURCE_HOSTNAME" | grep -q '.neon.tech$' # <https://neon.tech/docs/import/migrate-aws-dms>
-            then echo "endpoint=$(echo "$SOURCE_HOSTNAME" | cut -d"." -f"1")\$"
+            if echo "$SOURCE_HOSTNAME" | grep -q '.neon.tech$'; then # <https://neon.tech/docs/import/migrate-aws-dms>
+                echo "endpoint=$(echo "$SOURCE_HOSTNAME" | cut -d"." -f"1")\$"
             fi
         )$SOURCE_PASSWORD" \
         --port "5432" \
@@ -109,10 +107,10 @@ SOURCE_ENDPOINT_ARN="$(
         --server-name "$SOURCE_HOSTNAME" \
         --ssl-mode "$SSL_MODE" \
         --username "$SOURCE_USERNAME" ||
-    aws dms describe-endpoints \
-        --filters Name="endpoint-id",Values="$IDENTIFIER-source" \
-        --output "text" \
-        --query 'Endpoints[].EndpointArn'
+        aws dms describe-endpoints \
+            --filters Name="endpoint-id",Values="$IDENTIFIER-source" \
+            --output "text" \
+            --query 'Endpoints[].EndpointArn'
 )"
 [ "$SOURCE_ENDPOINT_ARN" ]
 aws dms modify-endpoint \
@@ -123,8 +121,8 @@ aws dms modify-endpoint \
     --engine-name "postgres" \
     --output "text" \
     --password "$(
-        if echo "$SOURCE_HOSTNAME" | grep -q '.neon.tech$' # <https://neon.tech/docs/import/migrate-aws-dms>
-        then echo "endpoint=$(echo "$SOURCE_HOSTNAME" | cut -d"." -f"1")\$"
+        if echo "$SOURCE_HOSTNAME" | grep -q '.neon.tech$'; then # <https://neon.tech/docs/import/migrate-aws-dms>
+            echo "endpoint=$(echo "$SOURCE_HOSTNAME" | cut -d"." -f"1")\$"
         fi
     )$SOURCE_PASSWORD" \
     --port "5432" \
@@ -145,10 +143,10 @@ TARGET_ENDPOINT_ARN="$(
         --query 'Endpoint.EndpointArn' \
         --server-name "$TARGET_HOSTNAME" \
         --username "$TARGET_USERNAME" ||
-    aws dms describe-endpoints \
-        --filters Name="endpoint-id",Values="$IDENTIFIER-target" \
-        --output "text" \
-        --query 'Endpoints[].EndpointArn'
+        aws dms describe-endpoints \
+            --filters Name="endpoint-id",Values="$IDENTIFIER-target" \
+            --output "text" \
+            --query 'Endpoints[].EndpointArn'
 )"
 [ "$TARGET_ENDPOINT_ARN" ]
 aws dms modify-endpoint \
@@ -167,12 +165,12 @@ aws dms modify-endpoint \
 echo "Creating replication subnet group..."
 aws ec2 describe-subnets \
     --filters \
-        Name="map-public-ip-on-launch",Values="true" \
-        Name="default-for-az",Values="true" \
-        Name="vpc-id",Values="$(aws ec2 describe-vpcs \
-            --filters Name="is-default",Values="true" \
-            --output "text" \
-            --query 'Vpcs[].VpcId')" \
+    Name="map-public-ip-on-launch",Values="true" \
+    Name="default-for-az",Values="true" \
+    Name="vpc-id",Values="$(aws ec2 describe-vpcs \
+        --filters Name="is-default",Values="true" \
+        --output "text" \
+        --query 'Vpcs[].VpcId')" \
     --output "text" \
     --query 'Subnets[?AvailabilityZoneId != `use1-az3`].SubnetId' >"$TMP/subnet-ids.txt"
 xargs aws dms create-replication-subnet-group \
@@ -181,12 +179,12 @@ xargs aws dms create-replication-subnet-group \
     --replication-subnet-group-description "$IDENTIFIER" \
     --replication-subnet-group-identifier "$IDENTIFIER" \
     --subnet-ids <"$TMP/subnet-ids.txt" ||
-xargs aws dms modify-replication-subnet-group \
-    --output "text" \
-    --query 'ReplicationSubnetGroup.ReplicationSubnetGroupIdentifier' \
-    --replication-subnet-group-description "$IDENTIFIER" \
-    --replication-subnet-group-identifier "$IDENTIFIER" \
-    --subnet-ids <"$TMP/subnet-ids.txt"
+    xargs aws dms modify-replication-subnet-group \
+        --output "text" \
+        --query 'ReplicationSubnetGroup.ReplicationSubnetGroupIdentifier' \
+        --replication-subnet-group-description "$IDENTIFIER" \
+        --replication-subnet-group-identifier "$IDENTIFIER" \
+        --subnet-ids <"$TMP/subnet-ids.txt"
 
 echo "Creating replication instance..."
 REPLICATION_INSTANCE_ARN="$(
@@ -197,10 +195,10 @@ REPLICATION_INSTANCE_ARN="$(
         --replication-instance-class "$INSTANCE_TYPE" \
         --replication-instance-identifier "$IDENTIFIER" \
         --replication-subnet-group-identifier "$IDENTIFIER" ||
-    aws dms describe-replication-instances \
-        --filters Name="replication-instance-id",Values="$IDENTIFIER" \
-        --output "text" \
-        --query 'ReplicationInstances[].ReplicationInstanceArn'
+        aws dms describe-replication-instances \
+            --filters Name="replication-instance-id",Values="$IDENTIFIER" \
+            --output "text" \
+            --query 'ReplicationInstances[].ReplicationInstanceArn'
 )"
 [ "$REPLICATION_INSTANCE_ARN" ]
 aws dms wait replication-instance-available \
@@ -219,50 +217,50 @@ aws dms wait replication-instance-available \
 echo "Testing source endpoint connection..."
 aws dms describe-connections \
     --filters \
-        Name="endpoint-arn",Values="$SOURCE_ENDPOINT_ARN" \
-        Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" \
+    Name="endpoint-arn",Values="$SOURCE_ENDPOINT_ARN" \
+    Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" \
     --output "text" \
     --query 'Connections[].Status' |
-grep "testing" ||
-aws dms test-connection \
-    --endpoint-arn "$SOURCE_ENDPOINT_ARN" \
-    --output "text" \
-    --query 'Connection.Status' \
-    --replication-instance-arn "$REPLICATION_INSTANCE_ARN"
+    grep "testing" ||
+    aws dms test-connection \
+        --endpoint-arn "$SOURCE_ENDPOINT_ARN" \
+        --output "text" \
+        --query 'Connection.Status' \
+        --replication-instance-arn "$REPLICATION_INSTANCE_ARN"
 aws dms wait test-connection-succeeds --filters \
     Name="endpoint-arn",Values="$SOURCE_ENDPOINT_ARN" \
     Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" || {
     aws dms describe-connections --filters \
         Name="endpoint-arn",Values="$SOURCE_ENDPOINT_ARN" \
         Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" |
-    jq -e '.'
+        jq -e '.'
     exit 1
 }
 echo "Testing target endpoint connection..."
 aws dms describe-connections \
     --filters \
-        Name="endpoint-arn",Values="$TARGET_ENDPOINT_ARN" \
-        Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" \
+    Name="endpoint-arn",Values="$TARGET_ENDPOINT_ARN" \
+    Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" \
     --output "text" \
     --query 'Connections[].Status' |
-grep "testing" ||
-aws dms test-connection \
-    --endpoint-arn "$TARGET_ENDPOINT_ARN" \
-    --output "text" \
-    --query 'Connection.Status' \
-    --replication-instance-arn "$REPLICATION_INSTANCE_ARN"
+    grep "testing" ||
+    aws dms test-connection \
+        --endpoint-arn "$TARGET_ENDPOINT_ARN" \
+        --output "text" \
+        --query 'Connection.Status' \
+        --replication-instance-arn "$REPLICATION_INSTANCE_ARN"
 aws dms wait test-connection-succeeds --filters \
     Name="endpoint-arn",Values="$TARGET_ENDPOINT_ARN" \
     Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" || {
     aws dms describe-connections --filters \
         Name="endpoint-arn",Values="$TARGET_ENDPOINT_ARN" \
         Name="replication-instance-arn",Values="$REPLICATION_INSTANCE_ARN" |
-    jq -e '.'
+        jq -e '.'
     exit 1
 }
 
-if [ "$INIT_ONLY" ]
-then exit
+if [ "$INIT_ONLY" ]; then
+    exit
 fi
 
 echo "Updating status to 'copying'..."
@@ -323,8 +321,8 @@ tee "$TMP/table-mappings.json" <<EOF
             "rule-name": "include-all",
             "rule-type": "selection"
 EOF
-if [ "$SOURCE_SCHEMA" != "$TARGET_DATABASE" ]
-then tee -a "$TMP/table-mappings.json" <<EOF
+if [ "$SOURCE_SCHEMA" != "$TARGET_DATABASE" ]; then
+    tee -a "$TMP/table-mappings.json" <<EOF
         },
         {
             "object-locator": {
@@ -344,12 +342,11 @@ tee -a "$TMP/table-mappings.json" <<EOF
     ]
 }
 EOF
-if [ "$TABLE_MAPPINGS" ]
-then
+if [ "$TABLE_MAPPINGS" ]; then
     mv "$TMP/table-mappings.json" "$TMP/base-table-mappings.json"
     jq -s '{"rules": (.[0].rules + .[1].rules)}' \
         "$TMP/base-table-mappings.json" "$TABLE_MAPPINGS" |
-    tee "$TMP/table-mappings.json"
+        tee "$TMP/table-mappings.json"
 fi
 echo "Creating replication task..."
 REPLICATION_TASK_ARN="$(
@@ -363,19 +360,19 @@ REPLICATION_TASK_ARN="$(
         --source-endpoint-arn "$SOURCE_ENDPOINT_ARN" \
         --table-mappings "file://$TMP/table-mappings.json" \
         --target-endpoint-arn "$TARGET_ENDPOINT_ARN" ||
-    aws dms describe-replication-tasks \
-        --filters Name="replication-task-id",Values="$IDENTIFIER" \
-        --output "text" \
-        --query 'ReplicationTasks[].ReplicationTaskArn'
+        aws dms describe-replication-tasks \
+            --filters Name="replication-task-id",Values="$IDENTIFIER" \
+            --output "text" \
+            --query 'ReplicationTasks[].ReplicationTaskArn'
 )"
 [ "$REPLICATION_TASK_ARN" ]
 aws dms describe-replication-tasks \
     --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN" \
     --output "text" \
     --query 'ReplicationTasks[].Status' |
-grep "running" ||
-aws dms wait replication-task-ready \
-    --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN"
+    grep "running" ||
+    aws dms wait replication-task-ready \
+        --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN"
 aws dms modify-replication-task \
     --migration-type "full-load-and-cdc" \
     --output "text" \
@@ -388,23 +385,23 @@ while aws dms describe-replication-tasks \
     --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN" \
     --output "text" \
     --query 'ReplicationTasks[].Status' |
-grep -q "modifying"
-do sleep 10
+    grep -q "modifying"; do
+    sleep 10
 done
 aws dms describe-replication-tasks \
     --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN" \
     --output "text" \
     --query 'ReplicationTasks[].Status' |
-grep "running" ||
-aws dms wait replication-task-ready \
-    --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN"
+    grep "running" ||
+    aws dms wait replication-task-ready \
+        --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN"
 
 aws dms describe-replication-tasks \
     --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN" \
     --output "text" \
     --query 'ReplicationTasks[].Status' |
-grep "running" ||
-echo "Starting replication task..."
+    grep "running" ||
+    echo "Starting replication task..."
 aws dms start-replication-task \
     --output "text" \
     --query 'ReplicationTask.ReplicationTaskArn' \
@@ -414,7 +411,10 @@ aws dms wait replication-task-running \
     --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN"
 
 aws dms describe-replication-tasks \
-    --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN" | grep -q "running" || { echo "Task not running"; exit 1; }
+    --filters Name="replication-task-arn",Values="$REPLICATION_TASK_ARN" | grep -q "running" || {
+    echo "Task not running"
+    exit 1
+}
 
 if [ "$DEBUG" ]; then
     set +x
@@ -430,12 +430,11 @@ psql -a -d"$SOURCE_DATABASE" -h"$SOURCE_HOSTNAME" -U"$SOURCE_USERNAME" <<EOF
 INSERT INTO _planetscale_import VALUES ($TS_REPLICATING, 'replicating');
 EOF
 echo "Waiting for replication marker to appear in target database..."
-while sleep 1
-do
+while sleep 1; do
     if echo "SELECT * FROM _planetscale_import WHERE ts = $TS_REPLICATING AND status = 'replicating';" |
-    mysql --defaults-extra-file="$TMP/my.cnf" -h"$TARGET_HOSTNAME" -u"$TARGET_USERNAME" "$TARGET_DATABASE" |
-    grep -q "replicating"
-    then break
+        mysql --defaults-extra-file="$TMP/my.cnf" -h"$TARGET_HOSTNAME" -u"$TARGET_USERNAME" "$TARGET_DATABASE" |
+        grep -q "replicating"; then
+        break
     fi
 done
 
